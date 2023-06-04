@@ -12,7 +12,8 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-
+const { exec } = require('child_process');
+const sudo = require('sudo-prompt');
 const spawn = require('await-spawn');
 
 let mainWindow: BrowserWindow | null = null;
@@ -34,7 +35,30 @@ const listDisks = async () => {
     .map((s) => s.split(' ')[0]);
   return disks.map((d) => `/dev/${d}`);
 };
+const sudoPromptOptions = {
+  name: 'Recoverio',
+  icon: path.join(__dirname, 'assets/icon.png'),
+};
+const startScan = async (event, { disk, filesystem, fileType, outputDir }) => {
+  console.log('startScan');
+  if (!outputDir) {
+    outputDir = '/tmp/recoverio.out';
+  }
+
+  const cwd = process.cwd();
+
+  sudo.exec(
+    `${cwd}/src/main/bin/recoverio -d ${disk} recover -f ${fileType} -o ${outputDir}`,
+    sudoPromptOptions,
+    (err, stdout, stderr) => {
+      console.log(stdout);
+      console.log(stderr);
+    }
+  );
+};
+
 ipcMain.handle('list-disks', listDisks);
+ipcMain.on('start-scan', startScan);
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');

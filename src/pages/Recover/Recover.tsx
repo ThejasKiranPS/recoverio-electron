@@ -22,6 +22,7 @@ const useStyles = createStyles((theme) => ({
 }));
 
 const supportedFilesystems = ['FAT32'];
+const supportedFileTypes = ['jpg', 'png'];
 export function Recover() {
   const [disks, setDisks] = useState<string[]>(['/dev/sda']);
   const theme = useMantineTheme();
@@ -29,7 +30,8 @@ export function Recover() {
   const form = useForm({
     initialValues: {
       disk: '',
-      filesystem: '',
+      filesystem: supportedFilesystems[0],
+      fileType: 'png',
     },
     validate: (values) => {
       const errors: Record<string, string> = {};
@@ -38,6 +40,9 @@ export function Recover() {
       }
       if (!values.filesystem) {
         errors.filesystem = 'Filesystem is required';
+      }
+      if (!values.fileType) {
+        errors.fileType = 'File type is required';
       }
       return errors;
     },
@@ -53,7 +58,7 @@ export function Recover() {
   const handleNext = () => {
     const res = form.validate();
     if (res.hasErrors) return;
-    console.log(form.values);
+    window.eapi.startScan(form.values);
     navigate('/recover/scan');
   };
 
@@ -74,6 +79,12 @@ export function Recover() {
         label="Select filesystem"
         placeholder="Select filesystem"
         {...form.getInputProps('filesystem')}
+      />
+      <Select
+        data={supportedFileTypes}
+        label="Select file type"
+        placeholder="Select file type"
+        {...form.getInputProps('fileType')}
       />
       <BottomNav
         next={

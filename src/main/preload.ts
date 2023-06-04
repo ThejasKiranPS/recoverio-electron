@@ -26,6 +26,7 @@ const electronHandler = {
 
 const electronApi = {
   listDisks: () => ipcRenderer.invoke('list-disks'),
+  startScan: (values) => ipcRenderer.send('start-scan', values),
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);
