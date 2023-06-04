@@ -13,6 +13,8 @@ import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
+const spawn = require('await-spawn');
+
 let mainWindow: BrowserWindow | null = null;
 
 ipcMain.on('ipc-example', async (event, arg) => {
@@ -20,6 +22,19 @@ ipcMain.on('ipc-example', async (event, arg) => {
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
 });
+
+const listDisks = async () => {
+  console.log('gotit');
+  // execute ls -l and get the output
+  const op = await spawn('lsblk', ['-d', '-n']);
+  const disks = op
+    .toString()
+    .split('\n')
+    .slice(0, -1)
+    .map((s) => s.split(' ')[0]);
+  return disks.map((d) => `/dev/${d}`);
+};
+ipcMain.handle('list-disks', listDisks);
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -65,7 +80,8 @@ const createWindow = async () => {
     height: 728,
     icon: getAssetPath('icon.png'),
     webPreferences: {
-      devTools: false,
+      nodeIntegration: true,
+      //      devTools: false,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),

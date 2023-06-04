@@ -24,6 +24,11 @@ const electronHandler = {
   },
 };
 
+const electronApi = {
+  listDisks: () => ipcRenderer.invoke('list-disks'),
+};
+
 contextBridge.exposeInMainWorld('electron', electronHandler);
+contextBridge.exposeInMainWorld('eapi', electronApi);
 
 export type ElectronHandler = typeof electronHandler;
