@@ -57,8 +57,23 @@ const startScan = async (event, { disk, filesystem, fileType, outputDir }) => {
   );
 };
 
+const openFile = async (event, path) => {
+  exec(`xdg-open ${path}`, (err, stdout, stderr) => {
+    console.log(stdout);
+    console.log(stderr);
+  });
+};
+
+const listRecoveredFiles = async () => {
+  const op = await spawn('ls', ['/tmp/recoverio.out']);
+  const files = op.toString().split('\n').slice(0, -1);
+  return files;
+};
+
 ipcMain.handle('list-disks', listDisks);
 ipcMain.on('start-scan', startScan);
+ipcMain.handle('list-recovered-files', listRecoveredFiles);
+ipcMain.on('open-file', openFile);
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
