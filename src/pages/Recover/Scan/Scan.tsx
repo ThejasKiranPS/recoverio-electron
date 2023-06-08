@@ -1,14 +1,23 @@
 /* eslint-disable promise/always-return */
-import { Button, Paper, Stack, Text, useMantineTheme } from '@mantine/core';
+import {
+  Button,
+  Group,
+  Loader,
+  Paper,
+  Stack,
+  Text,
+  useMantineTheme,
+} from '@mantine/core';
 import { BottomNav } from 'components/BottomNav';
 import { useNavigate } from 'react-router-dom';
-import { FileCard } from '../../../components/FileCard';
 import { useEffect, useState } from 'react';
+import { FileCard } from '../../../components/FileCard';
 
 export function ScanPage() {
   const theme = useMantineTheme();
   const navigate = useNavigate();
   const [files, setFiles] = useState<string[]>([]);
+  const [scanning, setScanning] = useState(true);
 
   // console log every 1 second
   useEffect(() => {
@@ -20,11 +29,16 @@ export function ScanPage() {
           setFiles(files);
         })
         .catch((err) => {
-          console.log(err);
+          // console.log(err);
         });
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleFinish = () => {
+    window.eapi.killAllRecoverIO();
+    setScanning(false);
+  };
 
   return (
     <Stack
@@ -32,9 +46,17 @@ export function ScanPage() {
       sx={{ backgroundColor: theme.colors.gray[1], height: '100vh' }}
       spacing="xs"
     >
-      <Text>Recovered files</Text>
+      {scanning ? (
+        <Group>
+          <Text c="dimmed">Scanning for files</Text>
+          <Loader />
+        </Group>
+      ) : (
+        <Text>Recovered Files</Text>
+      )}
+
       <Paper p="sm">
-        <Stack mih="60vh" mah={'80vh'} sx={{ overflow: 'auto' }}>
+        <Stack mih="60vh" mah="80vh" sx={{ overflow: 'auto' }}>
           {files.map((file) => (
             <FileCard
               key={file}
@@ -44,7 +66,7 @@ export function ScanPage() {
           ))}
         </Stack>
       </Paper>
-      <BottomNav next={<Button onClick={() => navigate('/')}>Finish</Button>} />
+      <BottomNav next={<Button onClick={handleFinish}>Finish</Button>} />
     </Stack>
   );
 }

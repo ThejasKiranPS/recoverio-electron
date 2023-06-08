@@ -8,22 +8,19 @@
  * When running `npm run build` or `npm run build:main`, this file is compiled to
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
-import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
-import MenuBuilder from './menu';
-import { resolveHtmlPath } from './util';
+
+const { app, BrowserWindow, shell, ipcMain } = require('electron');
 const { exec } = require('child_process');
+const path = require('path');
 const sudo = require('sudo-prompt');
 const spawn = require('await-spawn');
+const { resolveHtmlPath } = require('./util');
+const kill = require('tree-kill');
+// const MenuBuilder = require('./menu');
 
 let mainWindow: BrowserWindow | null = null;
 
-ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
-});
-
+let currentRunningProcess = null;
 const listDisks = async () => {
   console.log('gotit');
   // execute ls -l and get the output
@@ -37,24 +34,27 @@ const listDisks = async () => {
 };
 const sudoPromptOptions = {
   name: 'Recoverio',
-  icon: path.join(__dirname, 'assets/icon.png'),
+  icon: '../../assets/icon.png',
 };
+
 const startScan = async (event, { disk, filesystem, fileType, outputDir }) => {
   console.log('startScan');
   if (!outputDir) {
     outputDir = '/tmp/recoverio.out';
+    sudo.exec(`rm -rf ${outputDir}`, sudoPromptOptions);
   }
 
   const cwd = process.cwd();
 
-  sudo.exec(
-    `${cwd}/src/main/bin/recoverio -d ${disk} recover -f ${fileType} -o ${outputDir}`,
+  currentRunningProcess = sudo.exec(
+    `${cwd}/recover.io/target/release/recoverio -d ${disk} recover -f ${fileType} -o ${outputDir}`,
     sudoPromptOptions,
     (err, stdout, stderr) => {
       console.log(stdout);
       console.log(stderr);
     }
   );
+  console.log(currentRunningProcess);
 };
 
 const openFile = async (event, path) => {
@@ -65,15 +65,48 @@ const openFile = async (event, path) => {
 };
 
 const listRecoveredFiles = async () => {
-  const op = await spawn('ls', ['/tmp/recoverio.out']);
-  const files = op.toString().split('\n').slice(0, -1);
-  return files;
+  try {
+    const op = await spawn('ls', ['/tmp/recoverio.out']);
+    const files = op.toString().split('\n').slice(0, -1);
+    return files;
+  } catch (e) {
+    return [];
+  }
+};
+
+const formatDisk = async (event, { disk }) => {
+  console.log('formatDisk ', disk);
+  const cwd = process.cwd();
+
+  sudo.exec(
+    `${cwd}/recover.io/target/release/recoverio -d ${disk} format --talk-to-the-hand`,
+    sudoPromptOptions,
+    (err, stdout, stderr) => {
+      console.log(stdout);
+      console.log(stderr);
+    }
+  );
+};
+
+const killAllRecoverIO = async (event) => {
+  console.log('killAllRecoverIO');
+  sudo.exec(
+    `for pid in $(ps -ef | grep "release/recoverio" | grep -v "grep" | awk '{print $2}'); do kill -9 $pid;done`,
+    sudoPromptOptions,
+    (err, stdout, stderr) => {
+      console.log(stdout);
+      console.log(stderr);
+      console.log(err);
+    }
+  );
 };
 
 ipcMain.handle('list-disks', listDisks);
 ipcMain.on('start-scan', startScan);
 ipcMain.handle('list-recovered-files', listRecoveredFiles);
 ipcMain.on('open-file', openFile);
+ipcMain.on('format-disk', formatDisk);
+ipcMain.on('kill-all-recoverio', killAllRecoverIO);
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -145,8 +178,8 @@ const createWindow = async () => {
     mainWindow = null;
   });
 
-  const menuBuilder = new MenuBuilder(mainWindow);
-  menuBuilder.buildMenu();
+  // const menuBuilder = new MenuBuilder(mainWindow);
+  // menuBuilder.buildMenu();
 
   // Open urls in the user's browser
   mainWindow.webContents.setWindowOpenHandler((edata) => {

@@ -12,6 +12,9 @@ export function MainWindow() {
   const handleRecover = () => {
     navigate('/recover');
   };
+  const handleFormat = () => {
+    navigate('/format');
+  };
   const theme = useMantineTheme();
 
   return (
@@ -27,6 +30,7 @@ export function MainWindow() {
         <Button
           variant="default"
           className={`${classes.button} ${classes.redHover}`}
+          onClick={handleFormat}
         >
           Format
         </Button>

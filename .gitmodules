@@ -1,0 +1,3 @@
+[submodule "recover.io"]
+	path = recover.io
+	url = git@github.com:ThejasKiranPS/recover.io.git
